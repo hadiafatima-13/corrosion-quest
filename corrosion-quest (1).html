@@ -1,0 +1,158 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Corrosion Quest: Harbor Patrol</title>
+<style>
+:root{--bg:#faf6eb;--fg:#10222e;--ac:#f2b134;--bar:#10222e;--barfg:#fbe9b7;--alt:#d8e6ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c2b36;--fg:#f1ead6;--bar:#08151d;--alt:#31485a}}
+:root[data-theme="dark"]{--bg:#1c2b36;--fg:#f1ead6;--bar:#08151d;--alt:#31485a}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font-family:"Trebuchet MS","Segoe UI",sans-serif;color:var(--fg);background:#0d2a3a}
+#st{position:fixed;inset:0}#st canvas{display:block}
+.p{position:absolute;background:var(--bg);border:2px solid var(--fg);border-radius:6px;padding:10px 12px;font-size:14px;line-height:1.4;overflow:auto;max-height:calc(100% - 130px)}
+#left{left:8px;top:calc(62px + env(safe-area-inset-top,0px));width:250px}#right{right:8px;top:calc(62px + env(safe-area-inset-top,0px));width:290px}
+#book{left:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 16px));max-height:30%}
+#top{position:absolute;left:0;right:0;top:0;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;background:var(--bar);color:var(--barfg)}
+#top h1{font-size:17px;margin:0;flex:1;font-family:Georgia,serif;min-width:170px}
+h2{font-size:15px;margin:6px 0 4px;font-family:Georgia,serif}
+button{font:inherit;cursor:pointer;border:2px solid var(--fg);background:var(--ac);color:#10222e;border-radius:5px;padding:4px 9px;margin:2px}
+button:hover{filter:brightness(1.1)}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #1b6fd1;outline-offset:1px}
+button.on{background:var(--fg);color:var(--bg)}button.alt{background:var(--alt);color:var(--fg)}button:disabled{opacity:.4;cursor:not-allowed}
+label{display:block;margin-top:6px;font-weight:bold}input[type=range]{width:100%}textarea{width:100%;background:var(--bg);color:var(--fg)}
+.m{height:12px;background:#8884;border:1px solid var(--fg);border-radius:3px;overflow:hidden}.m i{display:block;height:100%;width:0}
+#tabs{position:absolute;left:50%;transform:translateX(-50%);top:calc(60px + env(safe-area-inset-top,0px));display:flex;flex-wrap:wrap;justify-content:center;max-width:40%}
+.cap{background:var(--bar);color:var(--barfg);border-radius:4px;padding:5px 8px;font-size:13px;margin-top:6px}
+#logs{margin:0;padding-left:18px}.d{color:#0a8a4a;font-weight:bold}
+#modal{position:fixed;inset:0;background:rgba(6,20,30,.8);display:none;align-items:center;justify-content:center;padding:12px;z-index:9}
+#mb{position:relative;max-width:640px;width:100%;max-height:92%;font-size:15px}
+.bk{width:120px;height:140px;margin:8px auto;border:3px solid var(--fg);border-top:none;border-radius:0 0 22px 22px;transition:background .6s}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px}
+#side{display:contents}
+@media(max-width:900px){#left{width:200px}#right{width:220px}#tabs{max-width:28%}.p{font-size:13px}}
+@media(max-width:700px){#side{position:absolute;left:0;right:0;top:100px;bottom:0;overflow:auto;padding:8px;display:block;pointer-events:none}#side .p{position:relative;inset:auto;width:auto;max-height:none;margin-bottom:8px;pointer-events:auto}#tabs,#book{display:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<div id="st" aria-label="3D harbor scene. Click a sample or press 1 to 4."></div>
+<div id="top"><h1>Corrosion Quest: Harbor Patrol</h1><button onclick="lab()">Redox lab</button><button onclick="learn()">Learn more</button><button onclick="ov()">Overview</button><button class="alt" onclick="tp()">Panels</button></div>
+<div id="tabs" role="tablist"></div>
+<div id="side">
+<div class="p" id="left"><h2>Harbor conditions</h2>
+<label>Water / humidity: <span id="vw"></span><input id="w" type="range" min="0" max="1" step=".05" value=".6"></label>
+<label>Oxygen: <span id="vo"></span><input id="o" type="range" min="0" max="1" step=".05" value=".6"></label>
+<label>Salt in air and water: <span id="vs"></span><input id="s" type="range" min="0" max="1" step=".05" value=".3"></label>
+<div class="cap" id="env"></div>
+<h2 id="day"></h2><input id="tm" type="range" aria-label="Scrub time in days" min="0" max="100" step="1" value="0">
+<button id="pl">Play</button><button class="alt" id="rs">Reset</button>
+<p style="font-size:12px">Keys: 1-4 sample, Space play, A particles, S scratch, R repair, M magnesium, arrows orbit. Drag to orbit, scroll to zoom.</p></div>
+<div class="p" id="right"><h2 id="nm"></h2>
+<div id="ml"></div><div class="m"><i id="mi" style="background:#9a3f10"></i></div>
+<div id="pt"><div id="pl2"></div><div class="m"><i id="mp" style="background:#5b8fb0"></i></div></div>
+<p id="ex"></p>
+<button id="bs">Scratch coating</button><button id="br">Repair coating</button><button id="bm">Attach magnesium</button><button id="ba">Particle view (simplified)</button>
+<div class="cap" id="ai" style="display:none" aria-live="polite"></div></div></div>
+<div class="p" id="book"><h2>Field notebook (auto-recorded)</h2><ol id="logs"></ol>
+<label>My explanation (optional)<textarea id="rf" rows="2" placeholder="Why did one sample last longer than another?"></textarea></label><div id="dc"></div></div>
+<div id="modal"><div class="p" id="mb" role="dialog"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=i=>document.getElementById(i),K=2.5,KI=['bare','paint','zinc','mg'],NM={bare:'Bare iron',paint:'Painted iron',zinc:'Galvanized iron (zinc coat)',mg:'Iron + magnesium block'};
+const S={t:0,play:false,w:.6,o:.6,salt:.3,sel:'bare',atom:false,log:[],disc:[],labDone:false,sm:{},nlog:-1};
+function fresh(){KI.forEach(k=>S.sm[k]={sc:false,at:false,iron:0,prot:0})}fresh();
+function rates(k,s,e){if(k=='bare')return[e,0];if(k=='paint')return[e*(s.sc?.6:.03),0];if(k=='zinc')return[s.prot>=100?e:0,e*(s.sc?.5:.12)];return s.at?[s.prot>=100?e:0,e*.8]:[e,0]}
+const oxid=(k,s)=>k=='zinc'&&s.prot<100?'Zn':k=='mg'&&s.at&&s.prot<100?'Mg':'Fe';
+const envf=()=>S.w*S.o*(.35+1.2*S.salt);
+const DISC=[
+['Salty, wet, oxygen-rich air rusts bare iron fastest (salt speeds it up; it is not what rusts).',()=>S.salt>.6&&S.w>.5&&S.o>.5&&S.sm.bare.iron>15],
+['With little water or oxygen, iron barely rusts: both are needed.',()=>(S.w<.2||S.o<.2)&&S.t>=20&&S.sm.bare.iron<10],
+['A scratch in paint lets rust start: paint protects only as a barrier.',()=>S.sm.paint.sc&&S.sm.paint.iron>15],
+['Scratched zinc still protects the iron: zinc is oxidised first (it is more reactive).',()=>S.sm.zinc.sc&&S.sm.zinc.prot>20&&S.sm.zinc.iron<1],
+['Magnesium is oxidised instead of iron: sacrificial protection.',()=>S.sm.mg.at&&S.sm.mg.prot>20&&S.sm.mg.iron<1],
+['Redox lab: a colour change is evidence of oxidation and reduction happening together.',()=>S.labDone]];
+function explain(k,s){
+if(k=='bare')return'Nothing stops oxygen and water reaching the iron. Iron is oxidised (loses electrons): Fe → Fe²⁺ + 2e⁻. Oxygen is reduced (gains electrons). The products form rust.';
+if(k=='paint')return s.sc?'The scratch exposes iron. Paint works only as a barrier, so rust starts where the barrier is broken.':'Paint is a barrier: water and oxygen cannot reach the iron. Try scratching it.';
+if(k=='zinc')return s.prot>=100?'The zinc is used up, so the iron is exposed and rusts.':s.sc?'Even with a scratch, zinc loses electrons first (Zn → Zn²⁺ + 2e⁻) because it is more reactive than iron. Nearby exposed iron stays protected while zinc remains.':'Galvanizing coats iron with zinc. It acts as a barrier first. Scratch it to test.';
+return s.at?(s.prot>=100?'The magnesium is used up. The iron is next!':'Magnesium is more reactive, so it is oxidised instead of iron (Mg → Mg²⁺ + 2e⁻). It is sacrificed to protect the hull.'):'The magnesium block is lying beside the plate, not attached. Attach it, then run time.'}
+function note(t,d){S.log.push({t:Math.round(S.t),x:t,d})}
+// ---- 3D
+const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));$('st').appendChild(R.domElement);
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x9ec9e8);sc.fog=new THREE.Fog(0x9ec9e8,20,50);
+const cam=new THREE.PerspectiveCamera(50,1,.1,100);
+function rz(){R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',rz);rz();
+sc.add(new THREE.HemisphereLight(0xffffff,0x445566,1.1));const sun=new THREE.DirectionalLight(0xffffff,1.6);sun.position.set(5,10,6);sc.add(sun);
+const std=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c},o||{})),bx=(w,h,d,m)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+const sea=new THREE.Mesh(new THREE.PlaneGeometry(90,90),std(0x1f6f9c,{roughness:.4}));sea.rotation.x=-Math.PI/2;sea.position.y=-.6;sc.add(sea);
+[[12,.4,4.5,0x7a6a55,0,.2,0],[14,2.2,3,0x8a3b2e,0,.5,-6],[4,1.6,2.4,0xe8e8e8,-2,2.4,-6]].forEach(a=>{const m=bx(a[0],a[1],a[2],std(a[3]));m.position.set(a[4],a[5],a[6]);sc.add(m)});
+const hum=bx(11.5,2.6,4.2,std(0x4aa3df,{transparent:true,opacity:.1,depthWrite:false}));hum.position.set(0,1.7,0);sc.add(hum);
+const IRON=new THREE.Color(0x8d949a),RUST=new THREE.Color(0x9a3f10),P={},pick=[];
+KI.forEach((k,i)=>{const g=new THREE.Group();g.position.set(-3.75+i*2.5,.9,0);sc.add(g);
+const pm=std(0x8d949a,{metalness:.7,roughness:.45}),pl=bx(1.8,.12,1.4,pm),cm=std(k=='paint'?0x2a6fdb:0xc9d3dc,{metalness:k=='zinc'?.8:.1,roughness:.4,transparent:true}),co=bx(1.84,.14,1.44,cm),st=bx(.16,.16,1.46,pm),mg=bx(.4,.3,.4,std(0xdfe4e6,{metalness:.3,roughness:.6}));
+co.visible=k=='paint'||k=='zinc';st.position.x=.2;st.visible=false;mg.visible=k=='mg';[pl,co,st].forEach(o=>{o.userData.k=k;g.add(o);pick.push(o)});g.add(mg);P[k]={g,pm,cm,st,mg}});
+const ring=new THREE.Mesh(new THREE.RingGeometry(1.15,1.3,40),new THREE.MeshBasicMaterial({color:0xffd23f,side:2}));ring.rotation.x=-Math.PI/2;sc.add(ring);
+const at=new THREE.Group();sc.add(at);at.visible=false;
+const mk=(r,m,n)=>Array.from({length:n},()=>{const s=new THREE.Mesh(new THREE.SphereGeometry(r,12,12),m);at.add(s);return s});
+const eA=mk(.07,new THREE.MeshBasicMaterial({color:0xffe14d}),14),ionM=std(0xd2691e),iA=mk(.16,ionM,6),oA=mk(.13,new THREE.MeshBasicMaterial({color:0x3a8dff}),4);
+// camera (simple orbit)
+const V={x:0,y:1,z:0,th:0,ph:1.15,r:9.5};let G=null;
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+function focus(k){const p=P[k].g.position;G={x:p.x,y:p.y,z:0,r:4.5}}
+function ov(){G={x:0,y:1,z:0,r:9.5}}
+let dn=null,mv=0;const cv=R.domElement,ray=new THREE.Raycaster();
+cv.addEventListener('pointerdown',e=>{dn=[e.clientX,e.clientY];mv=0;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(!dn)return;const dx=e.clientX-dn[0],dy=e.clientY-dn[1];mv+=Math.abs(dx)+Math.abs(dy);dn=[e.clientX,e.clientY];V.th-=dx*.006;V.ph=cl(V.ph-dy*.006,.3,1.5)});
+cv.addEventListener('pointerup',e=>{dn=null;if(mv>6)return;ray.setFromCamera(new THREE.Vector2(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1),cam);const h=ray.intersectObjects(pick.filter(o=>o.visible))[0];if(h)sel(h.object.userData.k)});
+cv.addEventListener('wheel',e=>{e.preventDefault();G=null;V.r=cl(V.r*(1+Math.sign(e.deltaY)*.1),3,16)},{passive:false});
+// ---- actions
+function sel(k){S.sel=k;focus(k)}
+function scr(){const s=S.sm[S.sel];if((S.sel=='paint'||S.sel=='zinc')&&!s.sc){s.sc=true;note('Scratched the '+(S.sel=='paint'?'paint':'zinc coat')+': iron exposed.')}}
+function rep(){const s=S.sm[S.sel];if((S.sel=='paint'||S.sel=='zinc')&&s.sc){s.sc=false;note('Repaired the '+(S.sel=='paint'?'paint':'zinc coat')+' barrier.')}}
+function mgt(){if(S.sel!='mg')return;const s=S.sm.mg;s.at=!s.at;note(s.at?'Attached the magnesium block to the iron.':'Detached the magnesium block.')}
+function atm(){S.atom=!S.atom;if(S.atom)note('Opened simplified particle view of '+NM[S.sel]+'.')}
+function tgl(){S.play=!S.play}
+function setT(t){const f=S.t>0?t/S.t:0;KI.forEach(k=>{S.sm[k].iron*=f;S.sm[k].prot*=f});S.t=t}
+function rset(){S.t=0;S.play=false;fresh();note('Reset all samples to new.')}
+function tp(){const d=$('side').style.display=='none';$('side').style.display=d?'':'none';$('book').style.display=d?'':'none'}
+$('pl').onclick=tgl;$('rs').onclick=rset;$('bs').onclick=scr;$('br').onclick=rep;$('bm').onclick=mgt;$('ba').onclick=atm;
+$('tm').oninput=e=>{S.play=false;setT(+e.target.value)};
+let ct;[['w','water / humidity'],['o','oxygen'],['s','salt']].forEach(([id,lb])=>$(id).oninput=e=>{const key=id=='s'?'salt':id;S[key]=+e.target.value;clearTimeout(ct);ct=setTimeout(()=>note('Set '+lb+' to '+Math.round(S[key]*100)+'%.'),900)});
+KI.forEach((k,i)=>{const b=document.createElement('button');b.id='t'+k;b.setAttribute('role','tab');b.textContent=(i+1)+'. '+NM[k];b.onclick=()=>sel(k);$('tabs').appendChild(b)});
+addEventListener('keydown',e=>{if(e.target.tagName=='TEXTAREA'||$('modal').style.display=='flex')return;const n='1234'.indexOf(e.key);if(n>=0)sel(KI[n]);const l=e.key.toLowerCase();
+if(e.key==' '){e.preventDefault();tgl()}if(l=='a')atm();if(l=='s')scr();if(l=='r')rep();if(l=='m')mgt();
+if(e.key=='ArrowLeft')V.th-=.1;if(e.key=='ArrowRight')V.th+=.1;if(e.key=='ArrowUp')V.ph=cl(V.ph-.08,.3,1.5);if(e.key=='ArrowDown')V.ph=cl(V.ph+.08,.3,1.5)});
+// ---- modals
+function md(h){$('mb').innerHTML=h;$('modal').style.display='flex'}function cm(){$('modal').style.display='none'}
+function brief(){md('<h2>Mission briefing</h2><p>The harbor\'s ships and piers are rusting. Test four samples in the harbor\'s salty, humid air and find out <b>why iron rusts</b> and <b>which protections work, and when they fail</b>.</p><p><b>Try this:</b> press Play and watch the samples. Change the conditions. Scratch the coatings. Attach the magnesium block. Open the particle view to see electrons move. Your notebook records everything. Six discoveries are hidden in the harbor.</p><p><b>Controls:</b> click a sample or press 1-4. Drag to orbit, scroll to zoom. Space plays and pauses. Buttons work with keyboard and touch.</p><button onclick="cm();note(\'Started patrol. Four samples are new.\')">Start mission</button>')}
+function learn(){md('<h2>Learn more</h2><ul><li><b>Corrosion</b> is the slow deterioration of a metal by chemical reactions with its environment. Iron rusting needs water and oxygen.</li><li><b>Oxidation</b> = loss of electrons (also gain of oxygen or loss of hydrogen; oxidation number goes up). <b>Reduction</b> = gain of electrons. They always happen together: a <b>redox</b> reaction.</li><li>Oxidising agent: causes oxidation and is itself reduced. Reducing agent: causes reduction and is itself oxidised.</li><li>Oxidation numbers: a free element is 0; a monoatomic ion\'s number equals its charge; the numbers add to 0 in a neutral compound and to the charge in a polyatomic ion. Roman numerals show it: iron(II) is Fe²⁺, iron(III) is Fe³⁺. Ionic formulae come from balancing charges, e.g. Fe³⁺ and O²⁻ give Fe₂O₃.</li><li><b>Barriers:</b> paint, galvanizing (zinc coat) and electroplating keep water and oxygen away.</li><li><b>Sacrificial protection:</b> a more reactive metal (Mg, Zn) is oxidised instead of iron. Ships carry magnesium blocks.</li><li>The particle view is a simplified diagram. Atoms cannot be seen with the naked eye.</li></ul><button onclick="cm()">Close</button>')}
+let d=0;const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
+function lab(){const c=mix(mix([225,240,246],[150,90,35],Math.min(d,8)/8),[125,30,150],d>8?(d-8)/4:0).map(Math.round);
+const m=d==0?'Beaker: colourless potassium iodide solution (KI) with dilute acid.':d<8?'Each purple drop of KMnO₄ turns colourless-brown on mixing: iodide ions (I⁻) are oxidised to iodine (I₂, brown).':d==8?'All the iodide is used. Watch what the next drop does.':'Extra purple KMnO₄ now stays purple: nothing is left to oxidise.';
+if(d>=3&&!S.labDone){S.labDone=true;note('Lab: purple KMnO₄ + KI gave a brown solution (iodine): a redox reaction.')}
+md('<h2>Redox lab: acidified KMnO₄ + KI</h2><div class="bk" role="img" aria-label="Beaker after '+d+' drops" style="background:rgb('+c+')"></div><p><b>Drops added: '+d+'.</b> '+m+'</p><button '+(d>=12?'disabled':'')+' onclick="d++;lab()">Add 1 drop of purple KMnO₄</button><button class="alt" onclick="d=0;lab()">Empty beaker</button>'+(d>=3?'<p class="cap">Colour change = evidence of a redox reaction. I⁻ loses electrons (oxidation), so KI is the <b>reducing agent</b>. MnO₄⁻ gains electrons and becomes nearly colourless Mn²⁺ (reduction), so KMnO₄ is the <b>oxidising agent</b>. Both happen at once.</p>':'')+'<button onclick="cm()">Back to the harbor</button>')}
+let shown=false;
+// ---- UI + loop
+function ui(){const k=S.sel,m=S.sm[k],e=envf(),cc=k=='paint'||k=='zinc';
+$('vw').textContent=Math.round(S.w*100)+'%';$('vo').textContent=Math.round(S.o*100)+'%';$('vs').textContent=Math.round(S.salt*100)+'%';
+$('env').textContent='Corrosion speed for bare iron: '+(Math.round(e*K*10)/10)+' per day';$('day').textContent='Time-lapse: day '+Math.round(S.t);$('tm').value=S.t;$('pl').textContent=S.play?'Pause':'Play';
+$('nm').textContent=NM[k];$('ml').textContent='Iron lost to rust: '+Math.round(m.iron)+'%';$('mi').style.width=m.iron+'%';
+$('pt').style.display=(k=='zinc'||k=='mg')?'':'none';$('pl2').textContent=(k=='zinc'?'Zinc used: ':'Magnesium used: ')+Math.round(m.prot)+'%';$('mp').style.width=m.prot+'%';
+$('ex').textContent=explain(k,m);$('bs').disabled=!cc||m.sc;$('br').disabled=!cc||!m.sc;$('bm').disabled=k!='mg';$('bm').textContent=m.at?'Detach magnesium':'Attach magnesium';$('ba').classList.toggle('on',S.atom);
+KI.forEach(x=>$('t'+x).className=x==k?'on':'');
+const ai=$('ai');ai.style.display=S.atom?'':'none';if(S.atom){const o=oxid(k,m),r=rates(k,m,e),col=o=='Fe'?'#d2691e':o=='Zn'?'#7f9fbf':'#a8e6a1';
+ai.innerHTML=(r[0]+r[1])*K<=.03?'Almost no reaction now: no particles shown.':'<div><span class="dot" style="background:#ffe14d"></span>Electrons (lost by '+o+') travel through the metal</div><div><span class="dot" style="background:'+col+'"></span>'+o+'²⁺ ions leave the metal (oxidation)</div><div><span class="dot" style="background:#3a8dff"></span>Oxygen and water gain the electrons (reduction)</div><div>Simplified model, not to scale. Atoms are far too small to see.</div>'}
+if(S.nlog!=S.log.length){S.nlog=S.log.length;$('logs').innerHTML=S.log.length?S.log.slice(-40).map(l=>'<li'+(l.d?' class="d"':'')+'>Day '+l.t+': '+l.x+'</li>').join(''):'<li>Nothing yet. Press Play, then try changes and interventions.</li>'}
+$('dc').textContent='Discoveries: '+S.disc.length+' / '+DISC.length}
+let last=performance.now(),hud=0;
+function loop(now){requestAnimationFrame(loop);const dt=Math.min(.1,(now-last)/1000);last=now;const e=envf();
+if(S.play){const dd=dt*8;S.t=Math.min(100,S.t+dd);if(S.t>=100)S.play=false;KI.forEach(k=>{const m=S.sm[k],r=rates(k,m,e);m.iron=Math.min(100,m.iron+r[0]*K*dd);m.prot=Math.min(100,m.prot+r[1]*K*dd)})}
+hum.material.opacity=.03+S.w*.22;hum.material.color.set(S.salt>.5?0x7fd6c8:0x4aa3df);
+KI.forEach(k=>{const m=S.sm[k],p=P[k];p.pm.color.copy(IRON).lerp(RUST,m.iron/100);p.st.visible=(k=='paint'||k=='zinc')&&m.sc;
+if(k=='zinc')p.cm.opacity=1-.92*(m.prot/100);
+if(k=='mg'){const s=Math.max(.05,1-m.prot/100);p.mg.scale.setScalar(s);p.mg.position.set(m.at?.7:1.15,m.at?.15+.15*s:-.5+.15*s,m.at?0:.9)}});
+const g=P[S.sel].g,m=S.sm[S.sel],r=rates(S.sel,m,e),sp=(r[0]+r[1])*K;ring.position.set(g.position.x,.42,0);
+at.visible=S.atom&&sp>.03;
+if(at.visible){const o=oxid(S.sel,m);ionM.color.set(o=='Fe'?0xd2691e:o=='Zn'?0x7f9fbf:0xa8e6a1);const ti=now/1000*Math.min(1.5,.3+sp*1.2);
+eA.forEach((a,i)=>{const q=(ti*.5+i/14)%1;a.position.set(g.position.x-.6+1.2*q,g.position.y+.55+.12*Math.sin(q*Math.PI),0)});
+iA.forEach((a,i)=>{const q=(ti*.3+i/6)%1;a.position.set(g.position.x-.6+((i%3)-1)*.25,g.position.y+.1+q*.9,((i%2)-.5)*.6);a.scale.setScalar(1-q*.7)});
+oA.forEach((a,i)=>a.position.set(g.position.x+.6+(i%2)*.2,g.position.y+.4+.05*Math.sin(now/400+i)+(i>>1)*.2,(i-1.5)*.25))}
+if(G){['x','y','z','r'].forEach(c=>V[c]+=(G[c]-V[c])*.08);if(Math.abs(V.r-G.r)+Math.abs(V.x-G.x)<.03)G=null}
+cam.position.set(V.x+V.r*Math.sin(V.ph)*Math.sin(V.th),V.y+V.r*Math.cos(V.ph),V.z+V.r*Math.sin(V.ph)*Math.cos(V.th));cam.lookAt(V.x,V.y,V.z);
+DISC.forEach((dc,i)=>{if(!S.disc.includes(i)&&dc[1]()){S.disc.push(i);note('Discovery: '+dc[0],1);if(S.disc.length==DISC.length&&!shown){shown=true;setTimeout(()=>md('<h2>Harbor secured!</h2><p>You discovered:</p><ul>'+DISC.map(x=>'<li>'+x[0]+'</li>').join('')+'</ul>'+($('rf').value?'<p><b>Your explanation:</b> '+$('rf').value.replace(/</g,'&lt;')+'</p>':'')+'<button onclick="cm()">Keep exploring</button>'),1200)}}});
+R.render(sc,cam);hud+=dt;if(hud>.1){hud=0;ui()}}
+brief();requestAnimationFrame(loop);
+</script></body></html>
